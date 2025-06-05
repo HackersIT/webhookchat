@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Live Webhook Chat</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body { font-family: sans-serif; margin: 0; padding: 10px; background: #f9f9f9; }
+    #chat { max-height: 90vh; overflow-y: scroll; padding: 10px; border-top: 1px solid #ccc; background: #fff; }
+    .msg { margin-bottom: 15px; }
+    .sender { font-weight: bold; margin-bottom: 5px; display: block; }
+    pre {
+      background: #272822;
+      color: #f8f8f2;
+      padding: 10px;
+      border-radius: 6px;
+      overflow-x: auto;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      font-family: monospace;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <h2>ACEX Flash Chat Bot</h2>
+  <div id="chat"></div>
+
+  <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.5/dist/purify.min.js"></script>
+
+  <script>
+    const socket = io();
+    const chat = document.getElementById("chat");
+
+    function addMessage(data) {
+      const div = document.createElement("div");
+      div.className = "msg";
+
+      // Sanitize sender only
+      const safeSender = DOMPurify.sanitize(data.sender);
+
+      // Create message block as plain text (not HTML-parsed)
+      const pre = document.createElement("pre");
+      pre.textContent = data.message;
+
+      // Append sender and message
+      div.innerHTML = `<span class="sender">${safeSender}:</span>`;
+      div.appendChild(pre);
+
+      chat.appendChild(div);
+      chat.scrollTop = chat.scrollHeight;
+    }
+
+    socket.on("init", (messages) => {
+      chat.innerHTML = "";
+      messages.forEach(addMessage);
+    });
+
+    socket.on("new-message", addMessage);
+  </script>
+</body>
+</html>
