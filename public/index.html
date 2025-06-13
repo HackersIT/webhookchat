@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     body { font-family: sans-serif; margin: 0; padding: 10px; background: #f9f9f9; }
-    #chat { max-height: 90vh; overflow-y: scroll; padding: 10px; border-top: 1px solid #ccc; background: #fff; }
+    #chat { max-height: 80vh; overflow-y: scroll; padding: 10px; border-top: 1px solid #ccc; background: #fff; }
     .msg { margin-bottom: 15px; }
     .sender { font-weight: bold; margin-bottom: 5px; display: block; }
     pre {
@@ -19,44 +19,90 @@
       font-family: monospace;
       font-size: 14px;
     }
+
+    #downloadBtn {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      padding: 10px 14px;
+      background: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      display: none;
+      z-index: 1000;
+    }
+
+    #downloadBtn:hover {
+      background: #45a049;
+    }
   </style>
 </head>
 <body>
   <h2>ACEX Flash Chat Bot</h2>
+  <button id="downloadBtn">Download PDF</button>
   <div id="chat"></div>
 
   <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.5/dist/purify.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
   <script>
     const socket = io();
     const chat = document.getElementById("chat");
+    const downloadBtn = document.getElementById("downloadBtn");
 
     function addMessage(data) {
       const div = document.createElement("div");
       div.className = "msg";
 
-      // Sanitize sender only
       const safeSender = DOMPurify.sanitize(data.sender);
-
-      // Create message block as plain text (not HTML-parsed)
       const pre = document.createElement("pre");
       pre.textContent = data.message;
 
-      // Append sender and message
       div.innerHTML = `<span class="sender">${safeSender}:</span>`;
       div.appendChild(pre);
 
-      chat.appendChild(div);
-      chat.scrollTop = chat.scrollHeight;
+      chat.insertBefore(div, chat.firstChild);
     }
 
     socket.on("init", (messages) => {
       chat.innerHTML = "";
-      messages.forEach(addMessage);
+      messages.reverse().forEach(addMessage);
     });
 
     socket.on("new-message", addMessage);
+
+    // Show download button only when URL has #download
+    if (window.location.hash === "#download") {
+      downloadBtn.style.display = "block";
+    }
+
+    downloadBtn.addEventListener("click", () => {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+      let y = 10;
+
+      const messages = document.querySelectorAll(".msg");
+      messages.forEach((msg) => {
+        const message = msg.querySelector("pre").textContent;
+        const text = `${message}\n\n`;
+
+        const lines = doc.splitTextToSize(text, 180);
+        doc.text(lines, 10, y);
+        y += lines.length * 10;
+
+        if (y > 270) {
+          doc.addPage();
+          y = 10;
+        }
+      });
+
+      const now = new Date();
+      const timestamp = now.toISOString().replace(/[:.]/g, "-");
+      doc.save(`chat_log_${timestamp}.pdf`);
+    });
   </script>
 </body>
 </html>
