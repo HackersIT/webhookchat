@@ -65,6 +65,7 @@
       div.appendChild(pre);
 
       chat.insertBefore(div, chat.firstChild);
+      chat.scrollTop = 0;
     }
 
     socket.on("init", (messages) => {
